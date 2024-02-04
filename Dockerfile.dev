@@ -1,0 +1,39 @@
+# Use uma imagem oficial do Python como base
+FROM python:3.8-slim
+
+# Define as variáveis de ambiente para evitar problemas com a execução do Python no modo "unbuffered"
+ENV PYTHONDONTWRITEBYTECODE 1
+ENV PYTHONUNBUFFERED 1
+
+# Cria e define o diretório de trabalho
+WORKDIR /app
+
+# Instala as dependências do sistema
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        libpq5 \
+        libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN pip install psycopg2-binary
+
+# Instala as dependências do Python
+COPY requirements.txt /app/
+RUN pip install --upgrade pip && pip install -r requirements.txt
+
+# Copia o código da aplicação para o contêiner
+COPY . /app/
+
+# Cria um usuário não privilegiado chamado "appuser"
+RUN adduser --disabled-password --gecos '' appuser
+
+# Dá permissões ao usuário no diretório de trabalho
+RUN chown -R appuser:appuser /app
+
+# Configuração do APT (Advanced Package Tool)
+RUN chown -R appuser:appuser /var/lib/apt/lists \
+    && chown -R appuser:appuser /var/lib/dpkg \
+    && chown -R appuser:appuser /var/cache/apt/archives
+
+# Muda para o usuário "appuser"
+USER appuser
